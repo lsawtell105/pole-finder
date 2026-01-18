@@ -212,34 +212,25 @@
         }
         
         .legend {
-            position: absolute;
-            bottom: 30px;
-            left: 10px;
-            background: white;
-            padding: 10px 14px;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-            z-index: 500;
+            display: flex;
+            align-items: center;
+            gap: 16px;
             font-size: 0.8rem;
+            margin-left: auto;
         }
         
         .legend-item {
             display: flex;
             align-items: center;
-            gap: 8px;
-            margin-bottom: 6px;
-        }
-        
-        .legend-item:last-child {
-            margin-bottom: 0;
+            gap: 5px;
+            color: white;
         }
         
         .legend-dot {
-            width: 12px;
-            height: 12px;
+            width: 10px;
+            height: 10px;
             border-radius: 50%;
             border: 2px solid white;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
         }
         
         .legend-dot.user { background: #3182ce; }
@@ -294,6 +285,20 @@
 <body>
     <div class="header">
         <h1>⚡ Pole Finder</h1>
+        <div class="legend">
+            <div class="legend-item">
+                <span class="legend-dot user"></span>
+                <span>You</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-dot pole"></span>
+                <span>Pole</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-dot closest"></span>
+                <span>Closest</span>
+            </div>
+        </div>
         <div class="header-controls">
             <div class="range-control">
                 <label>Range:</label>
@@ -339,21 +344,6 @@
     </div>
     
     <input type="file" id="fileInput" class="file-input" multiple accept=".shp,.dbf,.shx,.prj,.zip">
-    
-    <div class="legend">
-        <div class="legend-item">
-            <span class="legend-dot user"></span>
-            <span>Your Location</span>
-        </div>
-        <div class="legend-item">
-            <span class="legend-dot pole"></span>
-            <span>Pole</span>
-        </div>
-        <div class="legend-item">
-            <span class="legend-dot closest"></span>
-            <span>Closest Pole</span>
-        </div>
-    </div>
     
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
