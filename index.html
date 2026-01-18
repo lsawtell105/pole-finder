@@ -480,6 +480,29 @@
             }
         }
         
+        // Build popup showing all properties
+        function buildPopupContent(pole) {
+            let html = '<div style="max-height:300px;overflow-y:auto;font-size:12px;">';
+            html += '<table style="border-collapse:collapse;width:100%;">';
+            
+            // Add coordinates first
+            html += `<tr style="background:#e2e8f0;"><td style="padding:4px;font-weight:bold;">LAT</td><td style="padding:4px;">${pole.lat.toFixed(6)}</td></tr>`;
+            html += `<tr style="background:#edf2f7;"><td style="padding:4px;font-weight:bold;">LNG</td><td style="padding:4px;">${pole.lng.toFixed(6)}</td></tr>`;
+            
+            // Add all properties
+            let rowNum = 0;
+            for (const [key, value] of Object.entries(pole.properties || {})) {
+                if (value !== null && value !== undefined && value !== '') {
+                    const bg = rowNum % 2 === 0 ? '#f7fafc' : '#ffffff';
+                    html += `<tr style="background:${bg};"><td style="padding:4px;font-weight:bold;color:#3182ce;">${key}</td><td style="padding:4px;">${value}</td></tr>`;
+                    rowNum++;
+                }
+            }
+            
+            html += '</table></div>';
+            return html;
+        }
+        
         // Display all poles on map
         function displayAllPoles() {
             poleMarkers.clearLayers();
@@ -494,10 +517,15 @@
                     fillOpacity: 0.8
                 });
                 
-                marker.bindPopup(`<b>${pole.id}</b><br>Lat: ${pole.lat.toFixed(6)}<br>Lng: ${pole.lng.toFixed(6)}`);
+                marker.bindPopup(buildPopupContent(pole), { maxWidth: 300 });
                 marker.poleData = pole;
                 poleMarkers.addLayer(marker);
             });
+            
+            // Log first pole's fields to console for reference
+            if (poles.length > 0 && poles[0].properties) {
+                console.log('Available fields in shapefile:', Object.keys(poles[0].properties));
+            }
         }
         
         // Update display based on user position
