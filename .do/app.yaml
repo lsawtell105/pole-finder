@@ -1,0 +1,7 @@
+name: pole-finder
+region: nyc
+static_sites:
+  - name: pole-finder
+    source_dir: /
+    index_document: index.html
+    error_document: index.html

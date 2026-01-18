@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Pole Finder</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        #map {
+            flex: 1;
+            width: 100%;
+        }
+        
+        .header {
+            background: #1a365d;
+            color: white;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        
+        .header h1 {
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+        
+        .header-controls {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            background: #3182ce;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: background 0.2s;
+        }
+        
+        .btn:hover {
+            background: #2c5282;
+        }
+        
+        .btn:disabled {
+            background: #718096;
+            cursor: not-allowed;
+        }
+        
+        .btn-success {
+            background: #38a169;
+        }
+        
+        .btn-success:hover {
+            background: #2f855a;
+        }
+        
+        .info-panel {
+            background: white;
+            padding: 12px 16px;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            font-size: 0.9rem;
+        }
+        
+        .info-item {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        
+        .info-label {
+            color: #718096;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+        }
+        
+        .info-value {
+            font-weight: 600;
+            color: #2d3748;
+        }
+        
+        .info-value.highlight {
+            color: #e53e3e;
+            font-size: 1.1rem;
+        }
+        
+        .user-marker {
+            background: #3182ce;
+            border: 3px solid white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+        
+        .pole-marker {
+            background: #e53e3e;
+            border: 2px solid white;
+            border-radius: 50%;
+            width: 12px;
+            height: 12px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+        }
+        
+        .closest-pole-marker {
+            background: #38a169;
+            border: 3px solid white;
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+        
+        .drop-zone {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(26, 54, 93, 0.9);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        
+        .drop-zone.active {
+            display: flex;
+        }
+        
+        .drop-zone-content {
+            background: white;
+            padding: 40px 60px;
+            border-radius: 12px;
+            text-align: center;
+        }
+        
+        .drop-zone-content h2 {
+            color: #1a365d;
+            margin-bottom: 8px;
+        }
+        
+        .drop-zone-content p {
+            color: #718096;
+        }
+        
+        .file-input {
+            display: none;
+        }
+        
+        .status-bar {
+            background: #edf2f7;
+            padding: 8px 16px;
+            font-size: 0.85rem;
+            color: #4a5568;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #718096;
+        }
+        
+        .status-dot.active {
+            background: #38a169;
+            animation: blink 1s infinite;
+        }
+        
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .legend {
+            position: absolute;
+            bottom: 30px;
+            left: 10px;
+            background: white;
+            padding: 10px 14px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            z-index: 500;
+            font-size: 0.8rem;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+        
+        .legend-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        .legend-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            border: 2px solid white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
+        
+        .legend-dot.user { background: #3182ce; }
+        .legend-dot.pole { background: #e53e3e; }
+        .legend-dot.closest { background: #38a169; }
+        
+        .range-control {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255,255,255,0.1);
+            padding: 4px 12px;
+            border-radius: 6px;
+        }
+        
+        .range-control label {
+            font-size: 0.8rem;
+            white-space: nowrap;
+        }
+        
+        .range-control input[type="range"] {
+            width: 80px;
+        }
+        
+        .range-value {
+            font-weight: 600;
+            min-width: 50px;
+        }
+        
+        @media (max-width: 600px) {
+            .header {
+                padding: 10px;
+            }
+            
+            .header h1 {
+                font-size: 1rem;
+                width: 100%;
+            }
+            
+            .info-panel {
+                padding: 10px;
+                gap: 12px;
+            }
+            
+            .btn {
+                padding: 6px 12px;
+                font-size: 0.85rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>⚡ Pole Finder</h1>
+        <div class="header-controls">
+            <div class="range-control">
+                <label>Range:</label>
+                <input type="range" id="rangeSlider" min="100" max="2000" value="500" step="100">
+                <span class="range-value" id="rangeValue">500m</span>
+            </div>
+            <button class="btn" id="loadBtn">📁 Load Shapefile</button>
+            <button class="btn btn-success" id="locateBtn" disabled>📍 Find Me</button>
+        </div>
+    </div>
+    
+    <div class="status-bar">
+        <span class="status-dot" id="gpsStatus"></span>
+        <span id="statusText">Load a shapefile to begin</span>
+    </div>
+    
+    <div id="map"></div>
+    
+    <div class="info-panel">
+        <div class="info-item">
+            <span class="info-label">Poles Loaded</span>
+            <span class="info-value" id="poleCount">0</span>
+        </div>
+        <div class="info-item">
+            <span class="info-label">Closest Pole</span>
+            <span class="info-value highlight" id="closestPole">--</span>
+        </div>
+        <div class="info-item">
+            <span class="info-label">Distance</span>
+            <span class="info-value highlight" id="closestDistance">--</span>
+        </div>
+        <div class="info-item">
+            <span class="info-label">Your Position</span>
+            <span class="info-value" id="userPosition">--</span>
+        </div>
+    </div>
+    
+    <div class="drop-zone" id="dropZone">
+        <div class="drop-zone-content">
+            <h2>📁 Drop Shapefile Here</h2>
+            <p>Drop .shp, .dbf, and .shx files (or a .zip)</p>
+        </div>
+    </div>
+    
+    <input type="file" id="fileInput" class="file-input" multiple accept=".shp,.dbf,.shx,.prj,.zip">
+    
+    <div class="legend">
+        <div class="legend-item">
+            <span class="legend-dot user"></span>
+            <span>Your Location</span>
+        </div>
+        <div class="legend-item">
+            <span class="legend-dot pole"></span>
+            <span>Pole</span>
+        </div>
+        <div class="legend-item">
+            <span class="legend-dot closest"></span>
+            <span>Closest Pole</span>
+        </div>
+    </div>
+    
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Shapefile parser -->
+    <script src="https://unpkg.com/shpjs@4.0.4/dist/shp.js"></script>
+    
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize map centered on NC (will update to user location)
+        const map = L.map('map').setView([35.9, -75.6], 13);
+        
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+        
+        // State
+        let poles = [];
+        let userMarker = null;
+        let userPosition = null;
+        let closestPoleMarker = null;
+        let poleMarkers = L.layerGroup().addTo(map);
+        let sightLines = L.layerGroup().addTo(map);
+        let watchId = null;
+        let visibilityRange = 500; // meters
+        
+        // DOM elements
+        const loadBtn = document.getElementById('loadBtn');
+        const locateBtn = document.getElementById('locateBtn');
+        const fileInput = document.getElementById('fileInput');
+        const dropZone = document.getElementById('dropZone');
+        const rangeSlider = document.getElementById('rangeSlider');
+        const rangeValue = document.getElementById('rangeValue');
+        const gpsStatus = document.getElementById('gpsStatus');
+        const statusText = document.getElementById('statusText');
+        const poleCountEl = document.getElementById('poleCount');
+        const closestPoleEl = document.getElementById('closestPole');
+        const closestDistanceEl = document.getElementById('closestDistance');
+        const userPositionEl = document.getElementById('userPosition');
+        
+        // Haversine distance calculation (meters)
+        function getDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371000; // Earth radius in meters
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                      Math.sin(dLon/2) * Math.sin(dLon/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+        }
+        
+        // Format distance for display
+        function formatDistance(meters) {
+            if (meters < 1000) {
+                return `${Math.round(meters)}m`;
+            }
+            return `${(meters / 1000).toFixed(2)}km`;
+        }
+        
+        // Get pole identifier from properties
+        function getPoleId(properties) {
+            // Try common field names for pole ID
+            const idFields = ['POLE_ID', 'pole_id', 'PoleID', 'ID', 'id', 'OBJECTID', 
+                             'FID', 'NAME', 'name', 'POLE_NUM', 'POLE_NO', 'NUMBER',
+                             'FACILITY_I', 'ASSET_ID', 'LABEL'];
+            for (const field of idFields) {
+                if (properties[field]) {
+                    return String(properties[field]);
+                }
+            }
+            // Return first non-null property value
+            for (const key in properties) {
+                if (properties[key]) {
+                    return String(properties[key]);
+                }
+            }
+            return 'Unknown';
+        }
+        
+        // Process GeoJSON from shapefile
+        function processGeoJSON(geojson) {
+            poles = [];
+            
+            if (!geojson.features || geojson.features.length === 0) {
+                alert('No features found in shapefile');
+                return;
+            }
+            
+            geojson.features.forEach((feature, index) => {
+                if (feature.geometry && feature.geometry.coordinates) {
+                    let coords = feature.geometry.coordinates;
+                    
+                    // Handle different geometry types
+                    if (feature.geometry.type === 'Point') {
+                        poles.push({
+                            id: getPoleId(feature.properties) || `Pole ${index + 1}`,
+                            lat: coords[1],
+                            lng: coords[0],
+                            properties: feature.properties
+                        });
+                    } else if (feature.geometry.type === 'MultiPoint') {
+                        coords.forEach((coord, i) => {
+                            poles.push({
+                                id: `${getPoleId(feature.properties) || 'Pole'} ${index + 1}-${i + 1}`,
+                                lat: coord[1],
+                                lng: coord[0],
+                                properties: feature.properties
+                            });
+                        });
+                    }
+                }
+            });
+            
+            poleCountEl.textContent = poles.length;
+            statusText.textContent = `Loaded ${poles.length} poles`;
+            
+            if (poles.length > 0) {
+                locateBtn.disabled = false;
+                displayAllPoles();
+                
+                // Fit map to poles
+                const bounds = L.latLngBounds(poles.map(p => [p.lat, p.lng]));
+                map.fitBounds(bounds, { padding: [50, 50] });
+            }
+        }
+        
+        // Display all poles on map
+        function displayAllPoles() {
+            poleMarkers.clearLayers();
+            
+            poles.forEach(pole => {
+                const marker = L.circleMarker([pole.lat, pole.lng], {
+                    radius: 6,
+                    fillColor: '#e53e3e',
+                    color: 'white',
+                    weight: 2,
+                    opacity: 1,
+                    fillOpacity: 0.8
+                });
+                
+                marker.bindPopup(`<b>${pole.id}</b><br>Lat: ${pole.lat.toFixed(6)}<br>Lng: ${pole.lng.toFixed(6)}`);
+                marker.poleData = pole;
+                poleMarkers.addLayer(marker);
+            });
+        }
+        
+        // Update display based on user position
+        function updateDisplay() {
+            if (!userPosition || poles.length === 0) return;
+            
+            // Calculate distances
+            const polesWithDistance = poles.map(pole => ({
+                ...pole,
+                distance: getDistance(userPosition.lat, userPosition.lng, pole.lat, pole.lng)
+            }));
+            
+            // Sort by distance
+            polesWithDistance.sort((a, b) => a.distance - b.distance);
+            
+            // Get closest pole
+            const closest = polesWithDistance[0];
+            
+            // Update info panel
+            closestPoleEl.textContent = closest.id;
+            closestDistanceEl.textContent = formatDistance(closest.distance);
+            userPositionEl.textContent = `${userPosition.lat.toFixed(6)}, ${userPosition.lng.toFixed(6)}`;
+            
+            // Clear and redraw sight lines
+            sightLines.clearLayers();
+            
+            // Get poles within visibility range
+            const visiblePoles = polesWithDistance.filter(p => p.distance <= visibilityRange);
+            
+            // Draw lines to visible poles
+            visiblePoles.forEach((pole, index) => {
+                const isClosest = index === 0;
+                const line = L.polyline(
+                    [[userPosition.lat, userPosition.lng], [pole.lat, pole.lng]],
+                    {
+                        color: isClosest ? '#38a169' : '#e53e3e',
+                        weight: isClosest ? 3 : 2,
+                        opacity: isClosest ? 0.9 : 0.6,
+                        dashArray: isClosest ? null : '5, 10'
+                    }
+                );
+                
+                // Add distance label at midpoint
+                const midLat = (userPosition.lat + pole.lat) / 2;
+                const midLng = (userPosition.lng + pole.lng) / 2;
+                
+                line.bindTooltip(`${pole.id}: ${formatDistance(pole.distance)}`, {
+                    permanent: false,
+                    direction: 'center'
+                });
+                
+                sightLines.addLayer(line);
+            });
+            
+            // Update pole markers - highlight closest
+            poleMarkers.eachLayer(marker => {
+                const isClosest = marker.poleData.id === closest.id;
+                marker.setStyle({
+                    radius: isClosest ? 10 : 6,
+                    fillColor: isClosest ? '#38a169' : '#e53e3e',
+                    weight: isClosest ? 3 : 2
+                });
+                
+                if (isClosest) {
+                    marker.bringToFront();
+                }
+            });
+        }
+        
+        // Handle GPS position update
+        function handlePosition(position) {
+            const { latitude, longitude, accuracy } = position.coords;
+            
+            userPosition = { lat: latitude, lng: longitude };
+            
+            // Update/create user marker
+            if (userMarker) {
+                userMarker.setLatLng([latitude, longitude]);
+            } else {
+                userMarker = L.circleMarker([latitude, longitude], {
+                    radius: 10,
+                    fillColor: '#3182ce',
+                    color: 'white',
+                    weight: 3,
+                    opacity: 1,
+                    fillOpacity: 1
+                }).addTo(map);
+                
+                userMarker.bindPopup('Your Location');
+            }
+            
+            // Update status
+            gpsStatus.classList.add('active');
+            statusText.textContent = `GPS active (±${Math.round(accuracy)}m)`;
+            
+            // Center map on user if first fix
+            if (!watchId) {
+                map.setView([latitude, longitude], 16);
+            }
+            
+            updateDisplay();
+        }
+        
+        // Handle GPS error
+        function handleGPSError(error) {
+            gpsStatus.classList.remove('active');
+            let message = 'GPS error';
+            switch(error.code) {
+                case error.PERMISSION_DENIED:
+                    message = 'GPS permission denied';
+                    break;
+                case error.POSITION_UNAVAILABLE:
+                    message = 'GPS position unavailable';
+                    break;
+                case error.TIMEOUT:
+                    message = 'GPS timeout';
+                    break;
+            }
+            statusText.textContent = message;
+            alert(message + '. Please enable location services and refresh.');
+        }
+        
+        // Start GPS tracking
+        function startTracking() {
+            if (!navigator.geolocation) {
+                alert('Geolocation not supported by your browser');
+                return;
+            }
+            
+            statusText.textContent = 'Acquiring GPS...';
+            
+            // Get initial position
+            navigator.geolocation.getCurrentPosition(handlePosition, handleGPSError, {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 0
+            });
+            
+            // Watch for position changes
+            watchId = navigator.geolocation.watchPosition(handlePosition, handleGPSError, {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 5000
+            });
+        }
+        
+        // Load shapefile
+        async function loadShapefile(files) {
+            statusText.textContent = 'Processing shapefile...';
+            
+            try {
+                // If it's a zip file
+                if (files.length === 1 && files[0].name.endsWith('.zip')) {
+                    const arrayBuffer = await files[0].arrayBuffer();
+                    const geojson = await shp(arrayBuffer);
+                    
+                    // shp() can return an array if multiple layers
+                    if (Array.isArray(geojson)) {
+                        processGeoJSON(geojson[0]);
+                    } else {
+                        processGeoJSON(geojson);
+                    }
+                } else {
+                    // Multiple files (.shp, .dbf, etc.)
+                    const fileMap = {};
+                    for (const file of files) {
+                        const ext = file.name.split('.').pop().toLowerCase();
+                        fileMap[ext] = await file.arrayBuffer();
+                    }
+                    
+                    if (!fileMap.shp) {
+                        throw new Error('No .shp file found');
+                    }
+                    
+                    const geojson = await shp.combine([
+                        shp.parseShp(fileMap.shp, fileMap.prj),
+                        fileMap.dbf ? shp.parseDbf(fileMap.dbf) : null
+                    ]);
+                    
+                    processGeoJSON(geojson);
+                }
+            } catch (error) {
+                console.error('Error loading shapefile:', error);
+                statusText.textContent = 'Error loading shapefile';
+                alert('Error loading shapefile: ' + error.message);
+            }
+        }
+        
+        // Event listeners
+        loadBtn.addEventListener('click', () => fileInput.click());
+        
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                loadShapefile(Array.from(e.target.files));
+            }
+        });
+        
+        locateBtn.addEventListener('click', () => {
+            startTracking();
+            locateBtn.disabled = true;
+            locateBtn.textContent = '📍 Tracking...';
+        });
+        
+        rangeSlider.addEventListener('input', (e) => {
+            visibilityRange = parseInt(e.target.value);
+            rangeValue.textContent = `${visibilityRange}m`;
+            updateDisplay();
+        });
+        
+        // Drag and drop
+        document.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('active');
+        });
+        
+        document.addEventListener('dragleave', (e) => {
+            if (e.relatedTarget === null) {
+                dropZone.classList.remove('active');
+            }
+        });
+        
+        dropZone.addEventListener('dragover', (e) => e.preventDefault());
+        
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('active');
+            
+            const files = Array.from(e.dataTransfer.files);
+            if (files.length > 0) {
+                loadShapefile(files);
+            }
+        });
+        
+        // Prevent default drop on document
+        document.addEventListener('drop', (e) => e.preventDefault());
+    });
+    </script>
+</body>
+</html>
