@@ -81,6 +81,14 @@
             background: #2f855a;
         }
         
+        .btn-ar {
+            background: #805ad5;
+        }
+        
+        .btn-ar:hover {
+            background: #6b46c1;
+        }
+        
         .info-panel {
             background: white;
             padding: 12px 16px;
@@ -280,6 +288,159 @@
                 font-size: 0.85rem;
             }
         }
+        
+        /* AR View Styles */
+        .ar-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #000;
+            z-index: 2000;
+            display: none;
+        }
+        
+        .ar-overlay.active {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .ar-video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .ar-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+        
+        .ar-header {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(26, 54, 93, 0.85);
+            color: white;
+            padding: 12px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 2001;
+        }
+        
+        .ar-header h2 {
+            font-size: 1rem;
+            font-weight: 600;
+        }
+        
+        .ar-close {
+            background: #e53e3e;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+        
+        .ar-info {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(26, 54, 93, 0.85);
+            color: white;
+            padding: 16px;
+            z-index: 2001;
+        }
+        
+        .ar-info-grid {
+            display: flex;
+            justify-content: space-around;
+            text-align: center;
+        }
+        
+        .ar-info-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        
+        .ar-info-label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            opacity: 0.8;
+        }
+        
+        .ar-info-value {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+        
+        .ar-info-value.highlight {
+            color: #68d391;
+            font-size: 1.3rem;
+        }
+        
+        .ar-calibrate {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 30px;
+            border-radius: 12px;
+            text-align: center;
+            z-index: 2002;
+        }
+        
+        .ar-calibrate h3 {
+            margin-bottom: 10px;
+        }
+        
+        .ar-crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 40px;
+            height: 40px;
+            border: 2px solid rgba(255,255,255,0.5);
+            border-radius: 50%;
+            z-index: 2001;
+        }
+        
+        .ar-crosshair::before,
+        .ar-crosshair::after {
+            content: '';
+            position: absolute;
+            background: rgba(255,255,255,0.5);
+        }
+        
+        .ar-crosshair::before {
+            top: 50%;
+            left: -10px;
+            right: -10px;
+            height: 1px;
+        }
+        
+        .ar-crosshair::after {
+            left: 50%;
+            top: -10px;
+            bottom: -10px;
+            width: 1px;
+        }
     </style>
 </head>
 <body>
@@ -307,6 +468,7 @@
             </div>
             <button class="btn" id="loadBtn">📁 Load Shapefile</button>
             <button class="btn btn-success" id="locateBtn" disabled>📍 Find Me</button>
+            <button class="btn btn-ar" id="arBtn" disabled>📷 AR View</button>
         </div>
     </div>
     
@@ -344,6 +506,39 @@
     </div>
     
     <input type="file" id="fileInput" class="file-input" multiple accept=".shp,.dbf,.shx,.prj,.zip">
+    
+    <!-- AR View Overlay -->
+    <div class="ar-overlay" id="arOverlay">
+        <video class="ar-video" id="arVideo" autoplay playsinline></video>
+        <canvas class="ar-canvas" id="arCanvas"></canvas>
+        <div class="ar-crosshair"></div>
+        
+        <div class="ar-header">
+            <h2>📷 AR Pole Finder</h2>
+            <button class="ar-close" id="arClose">✕ Close</button>
+        </div>
+        
+        <div class="ar-info">
+            <div class="ar-info-grid">
+                <div class="ar-info-item">
+                    <span class="ar-info-label">Heading</span>
+                    <span class="ar-info-value" id="arHeading">--°</span>
+                </div>
+                <div class="ar-info-item">
+                    <span class="ar-info-label">Closest Map #</span>
+                    <span class="ar-info-value highlight" id="arClosest">--</span>
+                </div>
+                <div class="ar-info-item">
+                    <span class="ar-info-label">Distance</span>
+                    <span class="ar-info-value highlight" id="arDistance">--</span>
+                </div>
+                <div class="ar-info-item">
+                    <span class="ar-info-label">Bearing</span>
+                    <span class="ar-info-value" id="arBearing">--°</span>
+                </div>
+            </div>
+        </div>
+    </div>
     
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -483,6 +678,9 @@
                 // Fit map to poles
                 const bounds = L.latLngBounds(poles.map(p => [p.lat, p.lng]));
                 map.fitBounds(bounds, { padding: [50, 50] });
+                
+                // Check if AR is ready
+                if (typeof checkARReady === 'function') checkARReady();
             }
         }
         
@@ -633,6 +831,9 @@
             }
             
             updateDisplay();
+            
+            // Check if AR is ready
+            if (typeof checkARReady === 'function') checkARReady();
         }
         
         // Handle GPS error
@@ -767,6 +968,237 @@
         
         // Prevent default drop on document
         document.addEventListener('drop', (e) => e.preventDefault());
+        
+        // ========== AR VIEW FUNCTIONALITY ==========
+        const arBtn = document.getElementById('arBtn');
+        const arOverlay = document.getElementById('arOverlay');
+        const arVideo = document.getElementById('arVideo');
+        const arCanvas = document.getElementById('arCanvas');
+        const arClose = document.getElementById('arClose');
+        const arHeading = document.getElementById('arHeading');
+        const arClosest = document.getElementById('arClosest');
+        const arDistance = document.getElementById('arDistance');
+        const arBearing = document.getElementById('arBearing');
+        
+        let arStream = null;
+        let deviceHeading = 0;
+        let arAnimationId = null;
+        
+        // Calculate bearing from point 1 to point 2
+        function getBearing(lat1, lon1, lat2, lon2) {
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const lat1Rad = lat1 * Math.PI / 180;
+            const lat2Rad = lat2 * Math.PI / 180;
+            
+            const y = Math.sin(dLon) * Math.cos(lat2Rad);
+            const x = Math.cos(lat1Rad) * Math.sin(lat2Rad) -
+                      Math.sin(lat1Rad) * Math.cos(lat2Rad) * Math.cos(dLon);
+            
+            let bearing = Math.atan2(y, x) * 180 / Math.PI;
+            bearing = (bearing + 360) % 360;
+            return bearing;
+        }
+        
+        // Normalize angle difference to -180 to 180
+        function normalizeAngle(angle) {
+            while (angle > 180) angle -= 360;
+            while (angle < -180) angle += 360;
+            return angle;
+        }
+        
+        // Start AR view
+        async function startAR() {
+            try {
+                // Request camera access (prefer back camera)
+                arStream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        facingMode: { ideal: 'environment' },
+                        width: { ideal: 1920 },
+                        height: { ideal: 1080 }
+                    }
+                });
+                
+                arVideo.srcObject = arStream;
+                arOverlay.classList.add('active');
+                
+                // Resize canvas to match video
+                arCanvas.width = window.innerWidth;
+                arCanvas.height = window.innerHeight;
+                
+                // Request compass access
+                if (typeof DeviceOrientationEvent !== 'undefined' && 
+                    typeof DeviceOrientationEvent.requestPermission === 'function') {
+                    // iOS 13+ requires permission
+                    const permission = await DeviceOrientationEvent.requestPermission();
+                    if (permission !== 'granted') {
+                        alert('Compass permission denied');
+                    }
+                }
+                
+                // Listen for device orientation
+                window.addEventListener('deviceorientationabsolute', handleOrientation, true);
+                window.addEventListener('deviceorientation', handleOrientation, true);
+                
+                // Start AR render loop
+                renderAR();
+                
+            } catch (error) {
+                console.error('AR error:', error);
+                alert('Could not start AR: ' + error.message);
+            }
+        }
+        
+        // Handle device orientation
+        function handleOrientation(event) {
+            if (event.webkitCompassHeading) {
+                // iOS
+                deviceHeading = event.webkitCompassHeading;
+            } else if (event.alpha !== null) {
+                // Android - alpha is compass heading when absolute is true
+                if (event.absolute) {
+                    deviceHeading = (360 - event.alpha) % 360;
+                } else {
+                    deviceHeading = (360 - event.alpha) % 360;
+                }
+            }
+        }
+        
+        // Render AR overlay
+        function renderAR() {
+            const ctx = arCanvas.getContext('2d');
+            ctx.clearRect(0, 0, arCanvas.width, arCanvas.height);
+            
+            if (!userPosition || poles.length === 0) {
+                arAnimationId = requestAnimationFrame(renderAR);
+                return;
+            }
+            
+            // Calculate poles with distance and bearing
+            const polesWithData = poles.map(pole => {
+                const distance = getDistance(userPosition.lat, userPosition.lng, pole.lat, pole.lng);
+                const bearing = getBearing(userPosition.lat, userPosition.lng, pole.lat, pole.lng);
+                return { ...pole, distance, bearing };
+            });
+            
+            // Filter to visible range and sort by distance
+            const visiblePoles = polesWithData
+                .filter(p => p.distance <= visibilityRange)
+                .sort((a, b) => a.distance - b.distance);
+            
+            // Update info display
+            arHeading.textContent = `${Math.round(deviceHeading)}°`;
+            
+            if (visiblePoles.length > 0) {
+                const closest = visiblePoles[0];
+                arClosest.textContent = closest.mapNumber;
+                arDistance.textContent = formatDistance(closest.distance);
+                arBearing.textContent = `${Math.round(closest.bearing)}°`;
+            }
+            
+            // Camera field of view (approximate)
+            const hFOV = 60; // horizontal field of view in degrees
+            const screenWidth = arCanvas.width;
+            const screenHeight = arCanvas.height;
+            
+            // Draw pole labels
+            visiblePoles.forEach((pole, index) => {
+                // Calculate angle difference from current heading
+                const angleDiff = normalizeAngle(pole.bearing - deviceHeading);
+                
+                // Check if pole is within field of view
+                if (Math.abs(angleDiff) < hFOV / 2 + 30) { // Add some buffer
+                    // Convert angle to screen position
+                    const xPos = screenWidth / 2 + (angleDiff / hFOV) * screenWidth;
+                    
+                    // Y position based on distance (closer = lower on screen)
+                    const maxDist = visibilityRange;
+                    const yRatio = Math.min(pole.distance / maxDist, 1);
+                    const yPos = screenHeight * 0.3 + yRatio * screenHeight * 0.35;
+                    
+                    const isClosest = index === 0;
+                    
+                    // Draw connecting line from bottom
+                    ctx.beginPath();
+                    ctx.moveTo(xPos, screenHeight - 120);
+                    ctx.lineTo(xPos, yPos + 25);
+                    ctx.strokeStyle = isClosest ? 'rgba(72, 187, 120, 0.6)' : 'rgba(245, 101, 101, 0.4)';
+                    ctx.lineWidth = isClosest ? 3 : 1;
+                    ctx.setLineDash(isClosest ? [] : [5, 5]);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                    
+                    // Draw label background
+                    const label = `${pole.mapNumber}`;
+                    const distLabel = formatDistance(pole.distance);
+                    ctx.font = isClosest ? 'bold 16px sans-serif' : '14px sans-serif';
+                    const textWidth = Math.max(ctx.measureText(label).width, ctx.measureText(distLabel).width) + 16;
+                    const boxHeight = 50;
+                    
+                    // Background
+                    ctx.fillStyle = isClosest ? 'rgba(72, 187, 120, 0.9)' : 'rgba(26, 54, 93, 0.85)';
+                    ctx.beginPath();
+                    ctx.roundRect(xPos - textWidth/2, yPos - boxHeight/2, textWidth, boxHeight, 8);
+                    ctx.fill();
+                    
+                    // Border
+                    ctx.strokeStyle = isClosest ? '#2f855a' : '#3182ce';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                    
+                    // Text
+                    ctx.fillStyle = 'white';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.font = isClosest ? 'bold 16px sans-serif' : 'bold 14px sans-serif';
+                    ctx.fillText(label, xPos, yPos - 10);
+                    ctx.font = isClosest ? '14px sans-serif' : '12px sans-serif';
+                    ctx.fillText(distLabel, xPos, yPos + 12);
+                }
+            });
+            
+            // Draw compass indicator at top
+            ctx.fillStyle = 'rgba(255,255,255,0.9)';
+            ctx.font = 'bold 14px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(`↑ ${Math.round(deviceHeading)}°`, screenWidth / 2, 70);
+            
+            arAnimationId = requestAnimationFrame(renderAR);
+        }
+        
+        // Stop AR view
+        function stopAR() {
+            if (arStream) {
+                arStream.getTracks().forEach(track => track.stop());
+                arStream = null;
+            }
+            
+            if (arAnimationId) {
+                cancelAnimationFrame(arAnimationId);
+                arAnimationId = null;
+            }
+            
+            window.removeEventListener('deviceorientationabsolute', handleOrientation, true);
+            window.removeEventListener('deviceorientation', handleOrientation, true);
+            
+            arOverlay.classList.remove('active');
+        }
+        
+        // AR button click
+        arBtn.addEventListener('click', () => {
+            if (!userPosition) {
+                alert('Please enable GPS tracking first (click "Find Me")');
+                return;
+            }
+            startAR();
+        });
+        
+        // Close AR
+        arClose.addEventListener('click', stopAR);
+        
+        // Enable AR button when GPS is active and poles loaded
+        function checkARReady() {
+            arBtn.disabled = !(poles.length > 0 && userPosition);
+        }
     });
     </script>
 </body>
