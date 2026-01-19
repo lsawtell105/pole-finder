@@ -302,7 +302,7 @@
         <div class="header-controls">
             <div class="range-control">
                 <label>Range:</label>
-                <input type="range" id="rangeSlider" min="100" max="2000" value="500" step="100">
+                <input type="range" id="rangeSlider" min="1" max="1000" value="500" step="1">
                 <span class="range-value" id="rangeValue">500m</span>
             </div>
             <button class="btn" id="loadBtn">📁 Load Shapefile</button>
@@ -323,7 +323,7 @@
             <span class="info-value" id="poleCount">0</span>
         </div>
         <div class="info-item">
-            <span class="info-label">Closest Pole</span>
+            <span class="info-label">Closest Map #</span>
             <span class="info-value highlight" id="closestPole">--</span>
         </div>
         <div class="info-item">
@@ -403,7 +403,7 @@
             return `${(meters / 1000).toFixed(2)}km`;
         }
         
-        // Get pole identifier from properties
+        // Get pole identifier from properties (for internal use)
         function getPoleId(properties) {
             // Try common field names for pole ID
             const idFields = ['POLE_ID', 'pole_id', 'PoleID', 'ID', 'id', 'OBJECTID', 
@@ -423,6 +423,20 @@
             return 'Unknown';
         }
         
+        // Get MapNumber for display (prioritize MapNumber field)
+        function getMapNumber(properties) {
+            // Prioritize MapNumber field
+            const mapFields = ['MapNumber', 'MAPNUMBER', 'mapnumber', 'MAP_NUMBER', 'Map_Number',
+                              'MAP_NUM', 'MAPNUM', 'MapNum', 'MAP_NO', 'MapNo'];
+            for (const field of mapFields) {
+                if (properties[field]) {
+                    return String(properties[field]);
+                }
+            }
+            // Fall back to getPoleId if no MapNumber found
+            return getPoleId(properties);
+        }
+        
         // Process GeoJSON from shapefile
         function processGeoJSON(geojson) {
             poles = [];
@@ -440,6 +454,7 @@
                     if (feature.geometry.type === 'Point') {
                         poles.push({
                             id: getPoleId(feature.properties) || `Pole ${index + 1}`,
+                            mapNumber: getMapNumber(feature.properties),
                             lat: coords[1],
                             lng: coords[0],
                             properties: feature.properties
@@ -448,6 +463,7 @@
                         coords.forEach((coord, i) => {
                             poles.push({
                                 id: `${getPoleId(feature.properties) || 'Pole'} ${index + 1}-${i + 1}`,
+                                mapNumber: getMapNumber(feature.properties),
                                 lat: coord[1],
                                 lng: coord[0],
                                 properties: feature.properties
@@ -535,7 +551,7 @@
             const closest = polesWithDistance[0];
             
             // Update info panel
-            closestPoleEl.textContent = closest.id;
+            closestPoleEl.textContent = closest.mapNumber;
             closestDistanceEl.textContent = formatDistance(closest.distance);
             userPositionEl.textContent = `${userPosition.lat.toFixed(6)}, ${userPosition.lng.toFixed(6)}`;
             
@@ -562,7 +578,7 @@
                 const midLat = (userPosition.lat + pole.lat) / 2;
                 const midLng = (userPosition.lng + pole.lng) / 2;
                 
-                line.bindTooltip(`${pole.id}: ${formatDistance(pole.distance)}`, {
+                line.bindTooltip(`${pole.mapNumber}: ${formatDistance(pole.distance)}`, {
                     permanent: false,
                     direction: 'center'
                 });
@@ -570,9 +586,9 @@
                 sightLines.addLayer(line);
             });
             
-            // Update pole markers - highlight closest
+            // Update pole markers - highlight closest (use coordinates for unique match)
             poleMarkers.eachLayer(marker => {
-                const isClosest = marker.poleData.id === closest.id;
+                const isClosest = marker.poleData.lat === closest.lat && marker.poleData.lng === closest.lng;
                 marker.setStyle({
                     radius: isClosest ? 10 : 6,
                     fillColor: isClosest ? '#38a169' : '#e53e3e',
