@@ -1009,7 +1009,17 @@
         // Start AR view
         async function startAR() {
             try {
-                // Request camera access (prefer back camera)
+                // iOS 13+ requires compass permission from direct user gesture - must be FIRST
+                if (typeof DeviceOrientationEvent !== 'undefined' && 
+                    typeof DeviceOrientationEvent.requestPermission === 'function') {
+                    const permission = await DeviceOrientationEvent.requestPermission();
+                    if (permission !== 'granted') {
+                        alert('Compass permission denied. AR view needs compass access.');
+                        return;
+                    }
+                }
+                
+                // Now request camera access (prefer back camera)
                 arStream = await navigator.mediaDevices.getUserMedia({
                     video: {
                         facingMode: { ideal: 'environment' },
@@ -1024,16 +1034,6 @@
                 // Resize canvas to match video
                 arCanvas.width = window.innerWidth;
                 arCanvas.height = window.innerHeight;
-                
-                // Request compass access
-                if (typeof DeviceOrientationEvent !== 'undefined' && 
-                    typeof DeviceOrientationEvent.requestPermission === 'function') {
-                    // iOS 13+ requires permission
-                    const permission = await DeviceOrientationEvent.requestPermission();
-                    if (permission !== 'granted') {
-                        alert('Compass permission denied');
-                    }
-                }
                 
                 // Listen for device orientation
                 window.addEventListener('deviceorientationabsolute', handleOrientation, true);
